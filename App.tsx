@@ -25,13 +25,16 @@ const App: React.FC = () => {
   const [chats, setChats] = useState<ChatSession[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
-  // Load from local storage on mount
   useEffect(() => {
-    const savedImages = localStorage.getItem('prakhar_ai_images');
-    if (savedImages) setImages(JSON.parse(savedImages));
+    try {
+      const savedImages = localStorage.getItem('prakhar_ai_images');
+      if (savedImages) setImages(JSON.parse(savedImages));
 
-    const savedChats = localStorage.getItem('prakhar_ai_chats');
-    if (savedChats) setChats(JSON.parse(savedChats));
+      const savedChats = localStorage.getItem('prakhar_ai_chats');
+      if (savedChats) setChats(JSON.parse(savedChats));
+    } catch (e) {
+      console.warn("History failed to load from local storage.");
+    }
   }, []);
 
   const saveImage = (img: GeneratedImage) => {
@@ -98,7 +101,6 @@ const App: React.FC = () => {
       />
 
       <main className="flex-1 flex flex-col transition-all duration-300 relative overflow-hidden">
-        {/* Mobile Header */}
         <header className="md:hidden p-4 border-b flex items-center justify-between bg-white z-50">
           <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-gray-100 rounded-lg">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" /></svg>
