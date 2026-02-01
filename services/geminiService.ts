@@ -1,8 +1,7 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { GenerationConfig } from "../types";
+import { GenerationConfig } from "../types.ts";
 
-// Corrected: Guideline states to use process.env.API_KEY directly when initializing.
 export const generateImage = async (config: GenerationConfig): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
