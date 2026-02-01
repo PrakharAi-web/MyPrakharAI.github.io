@@ -11,8 +11,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
       :root {
-        --brand-orange: #FF6B00;
-        --brand-yellow: #FFB800;
+        --brand-red: #EF4444;
+        --brand-blue: #3B82F6;
+        --brand-yellow: #FACC15;
         --sidebar-bg: #f8fafc;
       }
       body {
@@ -29,18 +30,12 @@
         100% { background-position: 0% 50%; }
       }
 
-      .gemini-gradient-text {
-        background: linear-gradient(90deg, var(--brand-orange), var(--brand-yellow), var(--brand-orange));
+      .prakhar-gradient-text {
+        background: linear-gradient(90deg, var(--brand-red), var(--brand-blue), var(--brand-yellow));
         background-size: 200% auto;
         animation: sparkle-flow 4s linear infinite;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-      }
-
-      .gemini-loader-bar {
-        background: linear-gradient(90deg, var(--brand-orange), var(--brand-yellow), var(--brand-orange));
-        background-size: 200% 100%;
-        animation: sparkle-flow 1.5s linear infinite;
       }
 
       .custom-scrollbar::-webkit-scrollbar { width: 4px; }
@@ -54,15 +49,6 @@
         justify-content: center;
         height: 100vh;
         background: white;
-      }
-
-      .sidebar-item-active {
-        background-color: #f1f5f9;
-        font-weight: 600;
-      }
-
-      .sidebar-item-hover:hover {
-        background-color: #f1f5f9;
       }
 
       @keyframes soft-pulse {
@@ -90,9 +76,12 @@
   <body>
     <div id="root">
       <div class="loading-screen">
-        <div class="w-12 h-12 border-4 border-gray-100 border-t-[#FF6B00] rounded-full animate-spin"></div>
-        <h1 class="mt-4 text-xl font-black tracking-tighter text-gray-800">Prakhar<span class="text-[#FF6B00]">Ai</span></h1>
-        <p className="mt-2 text-xs text-gray-400 font-medium">Initializing Workspace...</p>
+        <div class="relative w-16 h-16">
+          <div class="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
+          <div class="absolute inset-0 border-4 border-transparent border-t-red-500 border-r-blue-500 animate-spin rounded-full"></div>
+        </div>
+        <h1 class="mt-6 text-2xl font-black tracking-tighter text-gray-800">Prakhar<span class="prakhar-gradient-text">Ai</span></h1>
+        <p style="margin-top: 12px; font-size: 13px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;">Powering Up...</p>
       </div>
     </div>
     <script type="module" src="index.tsx"></script>

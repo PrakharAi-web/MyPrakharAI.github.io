@@ -14,10 +14,12 @@ if (rootElement) {
       </React.StrictMode>
     );
   } catch (error) {
-    console.error("Initialization failed:", error);
-    rootElement.innerHTML = `<div style="padding: 20px; font-family: sans-serif; text-align: center;">
-      <h2 style="color: #FF6B00">Prakhar AI Encountered a Startup Error</h2>
-      <p>Please check your browser console for details.</p>
-    </div>`;
+    console.error("Critical Initialization Error:", error);
+    rootElement.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif;">
+        <h2 style="color: #FF6B00; font-weight: 900;">Startup Error</h2>
+        <p style="color: #64748b;">Prakhar AI could not start. Please refresh the page.</p>
+      </div>
+    `;
   }
 }
