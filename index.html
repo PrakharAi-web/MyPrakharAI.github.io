@@ -20,38 +20,49 @@
         background-color: #ffffff;
         color: #1a1a1a;
         margin: 0;
-        overflow: hidden;
+        overflow-x: hidden;
       }
       
-      @keyframes sparkle-flow {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-      }
-
       .prakhar-gradient-text {
         background: linear-gradient(90deg, var(--brand-red), var(--brand-blue), var(--brand-yellow));
         background-size: 200% auto;
-        animation: sparkle-flow 4s linear infinite;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
       }
 
       .loading-screen {
+        position: fixed;
+        inset: 0;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        height: 100vh;
         background: white;
+        z-index: 9999;
+        transition: opacity 0.5s ease-out;
       }
 
-      @keyframes soft-pulse {
-        0% { transform: scale(1); opacity: 0.15; }
-        50% { transform: scale(1.1); opacity: 0.1; }
-        100% { transform: scale(1); opacity: 0.15; }
+      #startup-error {
+        display: none;
+        max-width: 90%;
+        width: 400px;
+        padding: 24px;
+        background: #FEF2F2;
+        border: 2px solid #FCA5A5;
+        border-radius: 24px;
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      .hidden-loader {
+        opacity: 0;
+        pointer-events: none;
       }
     </style>
+    <script>
+      // CRITICAL SHIM: Prevent "process is not defined" error
+      window.process = { env: { API_KEY: "" } };
+    </script>
     <script type="importmap">
 {
   "imports": {
@@ -66,16 +77,33 @@
 </script>
   </head>
   <body>
-    <div id="root">
-      <div class="loading-screen">
-        <div class="relative w-16 h-16">
-          <div class="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
-          <div class="absolute inset-0 border-4 border-transparent border-t-red-500 border-r-blue-500 animate-spin rounded-full"></div>
-        </div>
-        <h1 class="mt-6 text-2xl font-black tracking-tighter text-gray-800">Prakhar<span class="prakhar-gradient-text">Ai</span></h1>
-        <p style="margin-top: 12px; font-size: 13px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;">Powering Up...</p>
+    <!-- Loader is outside the root to ensure it can be controlled independently -->
+    <div id="app-loading-screen" class="loading-screen">
+      <div id="loader-animation" class="relative w-16 h-16">
+        <div class="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
+        <div class="absolute inset-0 border-4 border-transparent border-t-red-500 border-r-blue-500 animate-spin rounded-full"></div>
       </div>
+      <h1 class="mt-6 text-2xl font-black tracking-tighter text-gray-800">Prakhar<span class="prakhar-gradient-text">Ai</span></h1>
+      <p id="status-text" style="margin-top: 12px; font-size: 13px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;">Powering Up...</p>
+      <div id="startup-error"></div>
     </div>
+
+    <div id="root"></div>
+
     <script type="module" src="index.tsx"></script>
+    
+    <script>
+      // Fallback: If modules fail to load within 10s, show error
+      setTimeout(() => {
+        const loader = document.getElementById('app-loading-screen');
+        if (loader && !loader.classList.contains('hidden-loader')) {
+          const errorDiv = document.getElementById('startup-error');
+          if (errorDiv) {
+            errorDiv.style.display = 'block';
+            errorDiv.innerHTML = `<h2 style="color: #EF4444; font-weight: 800;">Connection Timeout</h2><p>Slow network or browser restriction. Try refreshing.</p>`;
+          }
+        }
+      }, 10000);
+    </script>
   </body>
 </html>
