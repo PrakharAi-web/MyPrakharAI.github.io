@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar.tsx';
 import ChatInterface from './components/ChatInterface.tsx';
@@ -102,10 +101,16 @@ const App: React.FC = () => {
 
       <main className="flex-1 flex flex-col transition-all duration-300 relative overflow-hidden">
         <header className="md:hidden p-4 border-b flex items-center justify-between bg-white z-50">
-          <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-gray-100 rounded-lg">
+          <button 
+            onClick={() => setIsSidebarOpen(true)} 
+            className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
+            aria-label="Open menu"
+          >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" /></svg>
           </button>
-          <h1 className="text-xl font-black tracking-tighter">Prakhar<span className="text-[#FF6B00]">Ai</span></h1>
+          <h1 className="text-xl font-black tracking-tighter">
+            Prakhar<span className="prakhar-gradient-text">Ai</span>
+          </h1>
           <div className="w-10"></div>
         </header>
 

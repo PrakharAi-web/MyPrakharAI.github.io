@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 
 interface SignInModalProps {
@@ -24,9 +23,8 @@ const SignInModal: React.FC<SignInModalProps> = ({ isOpen, onClose, onSignIn }) 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/40 backdrop-blur-md animate-in fade-in duration-300">
       <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl border border-gray-100 p-10 relative overflow-hidden animate-in zoom-in-95 duration-300">
-        {/* Decorative Background Elements */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF6B00]/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#FFB800]/5 rounded-full -ml-16 -mb-16 blur-3xl"></div>
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[#EF4444]/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#3B82F6]/5 rounded-full -ml-16 -mb-16 blur-3xl"></div>
 
         <button 
           onClick={onClose}
@@ -39,7 +37,7 @@ const SignInModal: React.FC<SignInModalProps> = ({ isOpen, onClose, onSignIn }) 
 
         <div className="text-center mb-8">
           <h2 className="text-3xl font-black text-[#1f1f1f] tracking-tighter mb-2">
-            Unlock <span className="gemini-gradient-text">Private Access</span>
+            Unlock <span className="prakhar-gradient-text">Private Access</span>
           </h2>
           <p className="text-sm text-gray-500 font-medium">Personalize your Prakhar AI experience.</p>
         </div>
@@ -53,7 +51,7 @@ const SignInModal: React.FC<SignInModalProps> = ({ isOpen, onClose, onSignIn }) 
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Alex Sharma"
-              className="w-full px-6 py-4 bg-gray-100 border-none rounded-2xl focus:bg-white focus:ring-4 focus:ring-orange-100 transition-all text-[#1f1f1f]"
+              className="w-full px-6 py-4 bg-gray-100 border-none rounded-2xl focus:bg-white focus:ring-4 focus:ring-red-100 transition-all text-[#1f1f1f]"
             />
           </div>
           <div className="space-y-2">
@@ -64,13 +62,13 @@ const SignInModal: React.FC<SignInModalProps> = ({ isOpen, onClose, onSignIn }) 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
-              className="w-full px-6 py-4 bg-gray-100 border-none rounded-2xl focus:bg-white focus:ring-4 focus:ring-orange-100 transition-all text-[#1f1f1f]"
+              className="w-full px-6 py-4 bg-gray-100 border-none rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-100 transition-all text-[#1f1f1f]"
             />
           </div>
 
           <button 
             type="submit"
-            className="w-full bg-[#FF6B00] text-white py-4 rounded-2xl font-bold hover:bg-[#E66000] transition-all shadow-xl shadow-orange-500/10 active:scale-95"
+            className="w-full bg-[#EF4444] text-white py-4 rounded-2xl font-bold hover:bg-red-600 transition-all shadow-xl shadow-red-500/10 active:scale-95"
           >
             Start Personalized Session
           </button>
