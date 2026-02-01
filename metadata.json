@@ -1,0 +1,7 @@
+{
+  "name": "Prakhar AI",
+  "description": "A high-performance image generation and editing suite powered by Gemini, featuring a sleek orange and white design.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
