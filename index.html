@@ -39,28 +39,30 @@
         justify-content: center;
         background: white;
         z-index: 9999;
-        transition: opacity 0.5s ease-out;
+        transition: opacity 0.4s ease-out, visibility 0.4s;
       }
 
       #startup-error {
         display: none;
         max-width: 90%;
-        width: 400px;
-        padding: 24px;
-        background: #FEF2F2;
-        border: 2px solid #FCA5A5;
-        border-radius: 24px;
-        margin-top: 20px;
+        width: 420px;
+        padding: 32px;
+        background: #FFF7ED;
+        border: 2px solid var(--brand-yellow);
+        border-radius: 32px;
+        margin-top: 24px;
         text-align: center;
+        box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
       }
 
       .hidden-loader {
         opacity: 0;
+        visibility: hidden;
         pointer-events: none;
       }
     </style>
     <script>
-      // CRITICAL SHIM: Prevent "process is not defined" error
+      // Prevent "process is not defined" crash before the app loads
       window.process = { env: { API_KEY: "" } };
     </script>
     <script type="importmap">
@@ -77,15 +79,23 @@
 </script>
   </head>
   <body>
-    <!-- Loader is outside the root to ensure it can be controlled independently -->
     <div id="app-loading-screen" class="loading-screen">
-      <div id="loader-animation" class="relative w-16 h-16">
-        <div class="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
-        <div class="absolute inset-0 border-4 border-transparent border-t-red-500 border-r-blue-500 animate-spin rounded-full"></div>
+      <div id="loader-animation" class="relative w-20 h-20">
+        <div class="absolute inset-0 border-4 border-gray-50 rounded-full"></div>
+        <div class="absolute inset-0 border-4 border-transparent border-t-[#EF4444] border-r-[#3B82F6] animate-spin rounded-full"></div>
       </div>
-      <h1 class="mt-6 text-2xl font-black tracking-tighter text-gray-800">Prakhar<span class="prakhar-gradient-text">Ai</span></h1>
-      <p id="status-text" style="margin-top: 12px; font-size: 13px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;">Powering Up...</p>
-      <div id="startup-error"></div>
+      <h1 class="mt-8 text-3xl font-black tracking-tighter text-gray-900">Prakhar<span class="prakhar-gradient-text">Ai</span></h1>
+      <p id="status-text" style="margin-top: 16px; font-size: 11px; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.2em;">Initializing Neural Core...</p>
+      
+      <div id="startup-error">
+        <h2 style="color: #EF4444; font-weight: 900; font-size: 20px; margin-bottom: 12px;">Boot Interrupted</h2>
+        <p style="color: #4b5563; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+          Prakhar AI is having trouble connecting to the module server. This can happen if your internet is slow or if a browser extension is blocking the script.
+        </p>
+        <button onclick="window.location.reload()" style="background: #3B82F6; color: white; font-weight: 800; padding: 12px 32px; border-radius: 16px; border: none; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+          Try Again
+        </button>
+      </div>
     </div>
 
     <div id="root"></div>
@@ -93,17 +103,18 @@
     <script type="module" src="index.tsx"></script>
     
     <script>
-      // Fallback: If modules fail to load within 10s, show error
+      // Fallback timer: Show error if app doesn't signal ready within 8 seconds
       setTimeout(() => {
         const loader = document.getElementById('app-loading-screen');
         if (loader && !loader.classList.contains('hidden-loader')) {
           const errorDiv = document.getElementById('startup-error');
-          if (errorDiv) {
-            errorDiv.style.display = 'block';
-            errorDiv.innerHTML = `<h2 style="color: #EF4444; font-weight: 800;">Connection Timeout</h2><p>Slow network or browser restriction. Try refreshing.</p>`;
-          }
+          const anim = document.getElementById('loader-animation');
+          const status = document.getElementById('status-text');
+          if (errorDiv) errorDiv.style.display = 'block';
+          if (anim) anim.style.display = 'none';
+          if (status) status.style.display = 'none';
         }
-      }, 10000);
+      }, 8000);
     </script>
   </body>
 </html>

@@ -3,7 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 
-console.log("Prakhar AI: Booting systems...");
+console.log("Prakhar AI: Primary systems engaging...");
 
 const rootElement = document.getElementById('root');
 
@@ -18,28 +18,21 @@ if (rootElement) {
       </React.StrictMode>
     );
     
-    // We hide the loader after a tiny pause to ensure styles are applied
-    window.addEventListener('load', () => {
+    // Hide the loader as soon as React has completed the mount
+    // Using requestAnimationFrame ensures the browser has painted the initial UI
+    requestAnimationFrame(() => {
       setTimeout(() => {
         const loader = document.getElementById('app-loading-screen');
         if (loader) {
           loader.classList.add('hidden-loader');
-          setTimeout(() => loader.style.display = 'none', 500);
+          console.log("Prakhar AI: Neural Core Online.");
         }
-      }, 300);
+      }, 500);
     });
 
-    // Emergency clear if window.load already fired
-    if (document.readyState === 'complete') {
-      setTimeout(() => {
-        const loader = document.getElementById('app-loading-screen');
-        if (loader) loader.classList.add('hidden-loader');
-      }, 500);
-    }
-
   } catch (error) {
-    console.error("Prakhar AI: Startup Failure:", error);
+    console.error("Prakhar AI: Critical Mounting Failure:", error);
     const status = document.getElementById('status-text');
-    if (status) status.innerText = "System Error";
+    if (status) status.innerText = "System Failure";
   }
 }
