@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PrakharAi - AI Studio</title>
+    <title>PrakharAi - Creative Studio</title>
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
       :root {
         --brand-red: #EF4444;
@@ -17,18 +17,14 @@
       body {
         font-family: 'Inter', sans-serif;
         background-color: #ffffff;
-        color: #1a1a1a;
         margin: 0;
-        overflow-x: hidden;
+        overflow: hidden;
       }
-      
       .prakhar-gradient-text {
         background: linear-gradient(90deg, var(--brand-red), var(--brand-blue), var(--brand-yellow));
-        background-size: 200% auto;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
       }
-
       .loading-screen {
         position: fixed;
         inset: 0;
@@ -38,43 +34,27 @@
         justify-content: center;
         background: white;
         z-index: 9999;
-        transition: opacity 0.4s ease-out, visibility 0.4s;
       }
-
+      .hidden-loader {
+        display: none !important;
+      }
       #startup-error {
         display: none;
-        max-width: 90%;
-        width: 420px;
-        padding: 32px;
-        background: #FFF7ED;
-        border: 2px solid var(--brand-yellow);
-        border-radius: 32px;
-        margin-top: 24px;
+        padding: 2rem;
         text-align: center;
-        box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
-      }
-
-      .hidden-loader {
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
+        max-width: 400px;
       }
     </style>
     <script>
-      // Prevent "process is not defined" crash before the app loads
+      // Crucial: define process immediately to prevent SDK crashes
       window.process = { env: { API_KEY: "" } };
-      
-      // Global error logger for diagnostics
-      window.addEventListener('error', function(e) {
-        console.error('Prakhar AI Startup Error:', e.message);
-      });
     </script>
     <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@19.0.0",
-    "react-dom": "https://esm.sh/react-dom@19.0.0",
-    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "react": "https://esm.sh/react@19.0.0?dev",
+    "react-dom": "https://esm.sh/react-dom@19.0.0?dev",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client?dev",
     "@google/genai": "https://esm.sh/@google/genai@1.3.0",
     "react/": "https://esm.sh/react@^19.2.4/",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
@@ -84,41 +64,30 @@
   </head>
   <body>
     <div id="app-loading-screen" class="loading-screen">
-      <div id="loader-animation" class="relative w-20 h-20">
-        <div class="absolute inset-0 border-4 border-gray-50 rounded-full"></div>
-        <div class="absolute inset-0 border-4 border-transparent border-t-[#EF4444] border-r-[#3B82F6] animate-spin rounded-full"></div>
-      </div>
-      <h1 class="mt-8 text-3xl font-black tracking-tighter text-gray-900">Prakhar<span class="prakhar-gradient-text">Ai</span></h1>
-      <p id="status-text" style="margin-top: 16px; font-size: 11px; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.2em;">Initializing Neural Core...</p>
+      <div class="w-16 h-16 border-4 border-gray-100 border-t-[#EF4444] rounded-full animate-spin"></div>
+      <h1 class="mt-6 text-2xl font-black tracking-tighter">Prakhar<span class="prakhar-gradient-text">Ai</span></h1>
+      <p id="status-text" class="mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Loading Neural Engine...</p>
       
       <div id="startup-error">
-        <h2 style="color: #EF4444; font-weight: 900; font-size: 20px; margin-bottom: 12px;">Boot Interrupted</h2>
-        <p style="color: #4b5563; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
-          Prakhar AI is having trouble connecting. This usually happens due to a module conflict or slow network. We've optimized the boot engine to prevent this.
-        </p>
-        <button onclick="window.location.reload()" style="background: #3B82F6; color: white; font-weight: 800; padding: 12px 32px; border-radius: 16px; border: none; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-          Try Again
-        </button>
+        <p class="text-red-500 font-bold mb-4">Connection Stalled</p>
+        <button onclick="window.location.reload()" class="bg-blue-500 text-white px-6 py-2 rounded-full font-bold">Retry Connection</button>
       </div>
     </div>
 
     <div id="root"></div>
 
     <script type="module" src="index.tsx"></script>
-    
+
     <script>
-      // Fallback timer: Show error if app doesn't signal ready within 12 seconds
+      // If index.tsx doesn't hide the loader in 10 seconds, show the error UI
       setTimeout(() => {
         const loader = document.getElementById('app-loading-screen');
         if (loader && !loader.classList.contains('hidden-loader')) {
-          const errorDiv = document.getElementById('startup-error');
-          const anim = document.getElementById('loader-animation');
-          const status = document.getElementById('status-text');
-          if (errorDiv) errorDiv.style.display = 'block';
-          if (anim) anim.style.display = 'none';
-          if (status) status.style.display = 'none';
+          document.getElementById('startup-error').style.display = 'block';
+          const spin = loader.querySelector('.animate-spin');
+          if (spin) spin.style.display = 'none';
         }
-      }, 12000);
+      }, 10000);
     </script>
   </body>
 </html>

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { AspectRatio, GeneratedImage, GenerationConfig } from '../types.ts';
 import { generateImage } from '../services/geminiService.ts';
@@ -20,7 +19,7 @@ const StudioInterface: React.FC<StudioInterfaceProps> = ({ onNewImageCreated, on
 
   const handleGenerate = async () => {
     if (!prompt.trim() && !uploadData) {
-      setError("Input required: Description or Reference Image.");
+      setError("Please provide a prompt or an image to redesign.");
       return;
     }
 
@@ -29,7 +28,7 @@ const StudioInterface: React.FC<StudioInterfaceProps> = ({ onNewImageCreated, on
 
     try {
       const config: GenerationConfig = {
-        prompt,
+        prompt: prompt || "Redesign this image with premium aesthetic",
         aspectRatio,
         base64Image: uploadData?.data,
         mimeType: uploadData?.mimeType
@@ -38,9 +37,9 @@ const StudioInterface: React.FC<StudioInterfaceProps> = ({ onNewImageCreated, on
       const imageUrl = await generateImage(config);
       
       const newImage: GeneratedImage = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: Date.now().toString(),
         url: imageUrl,
-        prompt: prompt || "Intelligent Redesign",
+        prompt: prompt || "AI Intelligent Redesign",
         timestamp: Date.now(),
         type: uploadData ? 'edit' : 'generation'
       };
@@ -49,50 +48,50 @@ const StudioInterface: React.FC<StudioInterfaceProps> = ({ onNewImageCreated, on
       setPrompt('');
       setUploadData(null);
     } catch (err: any) {
-      setError(err.message || "Creative engine failure.");
+      setError("Creative Engine Offline. Check your connection.");
     } finally {
       onGenerationEnded();
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-white overflow-y-auto px-4 py-8 md:px-12 custom-scrollbar">
+    <div className="flex flex-col h-full bg-white overflow-y-auto px-4 py-8 md:px-12">
       <div className="max-w-4xl mx-auto w-full">
         <div className="mb-12 text-center">
-          <h2 className="text-5xl font-black tracking-tighter mb-4 italic">Art <span className="prakhar-gradient-text">Studio</span></h2>
+          <h2 className="text-5xl font-black tracking-tighter mb-4 italic">Prakhar <span className="prakhar-gradient-text">Studio</span></h2>
           <div className="flex items-center justify-center space-x-2">
-            <span className="h-1 w-12 bg-red-500 rounded-full"></span>
-            <span className="h-1 w-12 bg-blue-500 rounded-full"></span>
-            <span className="h-1 w-12 bg-yellow-400 rounded-full"></span>
+            <span className="h-1.5 w-8 bg-[#EF4444] rounded-full"></span>
+            <span className="h-1.5 w-8 bg-[#3B82F6] rounded-full"></span>
+            <span className="h-1.5 w-8 bg-[#FACC15] rounded-full"></span>
           </div>
         </div>
 
-        <div className="bg-gray-50/50 p-8 rounded-[3rem] border-2 border-gray-100 shadow-sm space-y-8">
+        <div className="bg-white p-8 rounded-[2.5rem] border-2 border-gray-100 shadow-2xl space-y-8">
            <div className="space-y-3">
-             <label className="text-[11px] font-black text-blue-500 uppercase tracking-widest ml-1">Creation Prompt</label>
+             <label className="text-[11px] font-black text-[#3B82F6] uppercase tracking-widest ml-1">Creation Command</label>
              <textarea 
                value={prompt}
                onChange={(e) => setPrompt(e.target.value)}
-               placeholder="A surreal landscape using Red and Blue light, golden sun peaks..."
-               className="w-full h-36 p-6 bg-white border-2 border-gray-50 rounded-[2rem] focus:border-yellow-400 outline-none transition-all resize-none font-bold text-gray-700 text-lg shadow-inner"
+               placeholder="Describe your masterpiece... (e.g., A blue cybernetic lion with red glowing eyes)"
+               className="w-full h-32 p-6 bg-gray-50 border-2 border-transparent focus:border-[#FACC15] focus:bg-white rounded-[2rem] outline-none transition-all resize-none font-bold text-gray-800 shadow-inner"
              />
            </div>
 
            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
              <div className="space-y-3">
-               <label className="text-[11px] font-black text-blue-500 uppercase tracking-widest ml-1">Reference Image (Optional)</label>
+               <label className="text-[11px] font-black text-[#EF4444] uppercase tracking-widest ml-1">Source Image (Upload)</label>
                {!uploadData ? (
                  <button 
                    onClick={() => fileInputRef.current?.click()}
-                   className="w-full h-40 border-2 border-dashed border-gray-200 rounded-[2rem] flex flex-col items-center justify-center text-gray-400 hover:border-yellow-400 hover:bg-yellow-50 transition-all group"
+                   className="w-full h-40 border-4 border-dashed border-gray-100 rounded-[2rem] flex flex-col items-center justify-center text-gray-400 hover:border-[#FACC15] hover:bg-yellow-50 transition-all group"
                  >
-                   <svg className="w-8 h-8 mb-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                   <span className="text-xs font-black uppercase tracking-wider">Upload Reference</span>
+                   <svg className="w-10 h-10 mb-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                   <span className="text-[10px] font-black uppercase tracking-widest">Select Image</span>
                  </button>
                ) : (
-                 <div className="relative group rounded-[2rem] overflow-hidden border-4 border-yellow-400 shadow-xl h-40">
+                 <div className="relative group rounded-[2rem] overflow-hidden border-4 border-[#FACC15] shadow-xl h-40">
                     <img src={`data:${uploadData.mimeType};base64,${uploadData.data}`} className="w-full h-full object-cover" />
-                    <button onClick={() => setUploadData(null)} className="absolute top-3 right-3 p-2 bg-red-500 text-white rounded-xl hover:scale-110 transition-all shadow-lg">
+                    <button onClick={() => setUploadData(null)} className="absolute top-3 right-3 p-2 bg-[#EF4444] text-white rounded-xl hover:scale-110 transition-all shadow-lg">
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                     </button>
                  </div>
@@ -106,13 +105,13 @@ const StudioInterface: React.FC<StudioInterfaceProps> = ({ onNewImageCreated, on
              </div>
 
              <div className="space-y-3">
-                <label className="text-[11px] font-black text-blue-500 uppercase tracking-widest ml-1">Dimensions</label>
+                <label className="text-[11px] font-black text-[#3B82F6] uppercase tracking-widest ml-1">Canvas Ratio</label>
                 <div className="grid grid-cols-2 gap-3 h-40">
                   {(['1:1', '16:9', '9:16', '4:3'] as AspectRatio[]).map((r) => (
                     <button 
                       key={r}
                       onClick={() => setAspectRatio(r)}
-                      className={`rounded-2xl text-sm font-black transition-all border-2 ${aspectRatio === r ? 'bg-yellow-400 border-yellow-400 text-white shadow-lg' : 'bg-white text-gray-400 border-gray-100 hover:border-yellow-200'}`}
+                      className={`rounded-2xl text-[11px] font-black transition-all border-2 ${aspectRatio === r ? 'bg-[#3B82F6] border-[#3B82F6] text-white shadow-lg' : 'bg-white text-gray-400 border-gray-100 hover:border-[#3B82F6]'}`}
                     >
                       {r}
                     </button>
@@ -122,21 +121,17 @@ const StudioInterface: React.FC<StudioInterfaceProps> = ({ onNewImageCreated, on
            </div>
 
            {error && (
-             <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-2xl">
-                <p className="text-red-600 text-[11px] font-black uppercase tracking-widest">{error}</p>
+             <div className="p-4 bg-red-50 border-l-4 border-[#EF4444] rounded-r-2xl">
+                <p className="text-[#EF4444] text-[11px] font-black uppercase tracking-widest">{error}</p>
              </div>
            )}
 
            <button 
             onClick={handleGenerate}
-            className="w-full py-6 bg-red-500 text-white font-black text-xl rounded-[2rem] hover:bg-red-600 hover:scale-[1.01] active:scale-[0.98] transition-all shadow-2xl shadow-red-200"
+            className="w-full py-6 bg-[#EF4444] text-white font-black text-xl rounded-[2rem] hover:bg-red-600 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-red-100"
            >
-             CRAFT MASTERPIECE
+             GENERATE ART
            </button>
-        </div>
-        
-        <div className="mt-12 text-center pb-20">
-           <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.5em]">Powered by Prakhar AI Creative Core</p>
         </div>
       </div>
     </div>
