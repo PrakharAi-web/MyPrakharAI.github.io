@@ -2,10 +2,9 @@
 import { GoogleGenAI } from "@google/genai";
 import { GenerationConfig } from "../types";
 
-const API_KEY = process.env.API_KEY || '';
-
+// Corrected: Guideline states to use process.env.API_KEY directly when initializing.
 export const generateImage = async (config: GenerationConfig): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const modelName = 'gemini-2.5-flash-image';
   
