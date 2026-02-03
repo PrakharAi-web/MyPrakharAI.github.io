@@ -9,12 +9,17 @@ if (rootElement) {
     const root = ReactDOM.createRoot(rootElement);
     root.render(<App />);
     
-    // Immediate removal of loader once rendering starts
-    const loader = document.getElementById('app-loading-screen');
-    if (loader) {
-      loader.classList.add('hidden-loader');
-    }
+    // Safety: Hide loader after a short timeout if the component doesn't do it
+    setTimeout(() => {
+      const loader = document.getElementById('app-loading-screen');
+      if (loader && !loader.classList.contains('hidden-loader')) {
+        loader.classList.add('hidden-loader');
+      }
+    }, 2000);
+    
   } catch (e) {
     console.error("Prakhar AI: Critical Init Error", e);
+    const loader = document.getElementById('app-loading-screen');
+    if (loader) loader.classList.add('hidden-loader');
   }
 }

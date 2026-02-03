@@ -1,7 +1,6 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI, GenerateContentResponse, Modality } from "@google/genai";
-import { ChatMessage, GeneratedImage } from '../types.ts';
+import { GoogleGenAI, Modality, Type, FunctionDeclaration } from "@google/genai";
+import { ChatMessage, GeneratedImage, AppTimer } from '../types.ts';
 import { fileToBase64 } from '../utils/imageUtils.ts';
 import { decodeBase64, decodeAudioData } from '../utils/audioUtils.ts';
 
@@ -15,6 +14,25 @@ interface ChatInterfaceProps {
   onUpdateHistory?: (id: string, messages: ChatMessage[], title?: string) => void;
   onSetActiveChat?: (id: string) => void;
 }
+
+const setTimerDeclaration: FunctionDeclaration = {
+  name: 'set_timer',
+  parameters: {
+    type: Type.OBJECT,
+    description: 'Set a countdown timer for a specific duration in seconds.',
+    properties: {
+      seconds: {
+        type: Type.NUMBER,
+        description: 'The number of seconds for the timer.',
+      },
+      label: {
+        type: Type.STRING,
+        description: 'A label for the timer, e.g., "Cooking Pasta" or "Workout Set".',
+      },
+    },
+    required: ['seconds', 'label'],
+  },
+};
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
   user, 
@@ -31,11 +49,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [isTyping, setIsTyping] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [attachedImage, setAttachedImage] = useState<{ data: string; mimeType: string } | null>(null);
+  const [activeTimers, setActiveTimers] = useState<AppTimer[]>([]);
   
   const currentChatId = useRef<string | null>(chatId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveTimers(prev => prev.map(timer => {
+        if (!timer.isActive) return timer;
+        const elapsed = Math.floor((Date.now() - timer.startTime) / 1000);
+        const remaining = Math.max(0, timer.duration - elapsed);
+        if (remaining === 0 && timer.isActive) {
+           return { ...timer, remaining: 0, isActive: false };
+        }
+        return { ...timer, remaining };
+      }));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -70,44 +104,67 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const modelMsgId = (Date.now() + 1).toString();
       
       const placeholder: ChatMessage = { id: modelMsgId, role: 'model', text: '', timestamp: Date.now() };
-      const newMessagesWithPlaceholder = [...updatedMessages, placeholder];
-      setMessages(newMessagesWithPlaceholder);
+      setMessages([...updatedMessages, placeholder]);
 
       const contents = updatedMessages.map(m => ({
         role: m.role,
         parts: [
           ...(m.image ? [{ inlineData: { data: m.image.data, mimeType: m.image.mimeType } }] : []),
-          { text: m.text || "Analyze this." }
+          { text: m.text || (m.image ? "Please analyze the nutritional content of the food in this image. Provide an exact estimated calorie count and a detailed breakdown of proteins, fats, and carbs." : "Respond to the user's request.") }
         ]
       }));
 
-      const stream = await ai.models.generateContentStream({
+      const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents,
         config: {
-          systemInstruction: "You are Prakhar AI. Created by Prakhar Sharma. Use a tone that is premium, intelligent, and helpful. Use White, Red, Blue, and Yellow imagery in your descriptions. Keep output clean and professional.",
+          tools: [{ functionDeclarations: [setTimerDeclaration] }],
+          systemInstruction: "You are Prakhar AI, a premium personal assistant developed by Prakhar Sharma. You excel at two major domains: 1) Efficiency Management (Timers): Use the 'set_timer' function when asked to time tasks. 2) Nutrition Analysis: When a food photo is provided, you must identify every item and provide an exact, professional estimate of total calories and macros. Your aesthetic is bold, confident, and professional. Always use Red, Blue, and Yellow highlights in your tone metaphorically. Crediting Prakhar Sharma is mandatory.",
         }
       });
 
-      let fullText = '';
-      for await (const chunk of stream) {
-        const text = (chunk as GenerateContentResponse).text;
-        if (text) {
-          fullText += text;
-          setMessages(prev => prev.map(m => m.id === modelMsgId ? { ...m, text: fullText } : m));
+      let finalContent = response.text || "";
+
+      if (response.functionCalls) {
+        for (const fc of response.functionCalls) {
+          if (fc.name === 'set_timer') {
+            const { seconds, label } = fc.args as { seconds: number; label: string };
+            const newTimer: AppTimer = {
+              id: Date.now().toString() + "-" + Math.random(),
+              label: label || "Timer",
+              duration: seconds,
+              remaining: seconds,
+              isActive: true,
+              startTime: Date.now()
+            };
+            setActiveTimers(prev => [...prev, newTimer]);
+            finalContent += `\n\n[Prakhar AI: Timer "${label}" initialized for ${seconds} seconds]`;
+          }
         }
       }
 
+      setMessages(prev => prev.map(m => m.id === modelMsgId ? { ...m, text: finalContent } : m));
+
       if (onUpdateHistory && currentChatId.current) {
-        const title = updatedMessages[0].text.slice(0, 30) + (updatedMessages[0].text.length > 30 ? "..." : "");
-        const finalModelMsg: ChatMessage = { id: modelMsgId, role: 'model', text: fullText, timestamp: Date.now() };
-        onUpdateHistory(currentChatId.current, [...updatedMessages, finalModelMsg], title);
+        const title = updatedMessages[0].text.slice(0, 30) || "Nutrition/Task Log";
+        onUpdateHistory(currentChatId.current, [...updatedMessages, { id: modelMsgId, role: 'model', text: finalContent, timestamp: Date.now() }], title);
       }
     } catch (err) {
       console.error(err);
+      setMessages(prev => prev.map(m => m.text === '' ? { ...m, text: "Connectivity anomaly in the Prakhar AI core. Please re-synchronize." } : m));
     } finally {
       setIsTyping(false);
     }
+  };
+
+  const removeTimer = (id: string) => {
+    setActiveTimers(prev => prev.filter(t => t.id !== id));
+  };
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   const speak = async (id: string, text: string) => {
@@ -135,87 +192,100 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
-  const suggestions = [
-    { title: "Creativity", text: "Generate a concept for a futuristic Red and Blue skyscraper" },
-    { title: "Analysis", text: "Explain the psychological impact of Yellow in industrial design" },
-    { title: "Strategy", text: "Plan a marketing campaign for a premium AI tool" },
-    { title: "Dream", text: "Describe a world where architecture is made of pure light" }
-  ];
-
   return (
     <div className="flex flex-col h-full bg-white relative">
-      <div className="flex-1 overflow-y-auto px-4 py-8 md:px-8 custom-scrollbar">
+      {/* Active Timers Dashboard */}
+      {activeTimers.length > 0 && (
+        <div className="absolute top-6 left-6 right-6 z-20 flex flex-wrap gap-3 pointer-events-none">
+          {activeTimers.map(timer => (
+            <div key={timer.id} className={`pointer-events-auto group flex items-center space-x-4 px-6 py-3 rounded-3xl shadow-2xl animate-in slide-in-from-top-6 border-2 transition-all ${timer.remaining === 0 ? 'bg-yellow-400 border-yellow-500 text-gray-900 animate-pulse' : 'bg-gray-900 border-gray-800 text-white'}`}>
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-60 italic">{timer.label}</span>
+                <span className="text-xl font-black italic mono tracking-tighter">{formatTime(timer.remaining)}</span>
+              </div>
+              <button onClick={() => removeTimer(timer.id)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto px-4 py-12 md:px-12 custom-scrollbar">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center max-w-4xl mx-auto space-y-12 animate-in fade-in zoom-in-95 duration-700">
             <div className="relative group">
-              <div className="absolute inset-0 bg-blue-500/10 rounded-full blur-3xl circle-pulse scale-150 group-hover:bg-red-500/15 transition-all"></div>
-              <div className="relative w-32 h-32 bg-white border-2 border-gray-100 rounded-[2.5rem] flex items-center justify-center shadow-2xl transform transition-transform group-hover:scale-105">
-                <span className="prakhar-gradient-text text-6xl font-black italic select-none">P</span>
+              <div className="absolute inset-0 bg-red-500/10 rounded-full blur-3xl circle-pulse scale-150 group-hover:bg-blue-500/15 transition-all"></div>
+              <div className="relative w-40 h-40 bg-white border border-gray-100 rounded-[3rem] flex items-center justify-center shadow-2xl transform transition-all group-hover:scale-105 group-hover:-rotate-3">
+                <span className="prakhar-gradient-text text-7xl font-black italic select-none">P</span>
               </div>
             </div>
             
             <div className="text-center space-y-4">
-              <h2 className="text-5xl md:text-6xl font-black tracking-tighter text-gray-900 leading-tight">
+              <h2 className="text-5xl md:text-7xl font-black tracking-tighter text-gray-900 leading-none italic">
                 Prakhar<span className="prakhar-gradient-text">AI</span>
               </h2>
-              <p className="text-lg md:text-xl font-bold text-gray-400 tracking-wide uppercase">
-                Intelligence Defined. Design Refined.
+              <p className="text-sm md:text-base font-black text-gray-400 tracking-[0.5em] uppercase italic">
+                Lifestyle & Nutrition Engine
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
-              {suggestions.map((s, i) => (
-                <button 
-                  key={i}
-                  onClick={() => handleSendMessage(undefined, s.text)}
-                  className="p-6 bg-gray-50 hover:bg-white border-2 border-transparent hover:border-blue-500/20 rounded-3xl text-left transition-all group shadow-sm hover:shadow-xl"
-                >
-                  <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2">{s.title}</p>
-                  <p className="text-sm font-semibold text-gray-600 group-hover:text-gray-900 leading-snug">{s.text}</p>
-                </button>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+              <button 
+                onClick={() => handleSendMessage(undefined, "Set a 10 minute timer for my workout session")}
+                className="p-8 border-2 border-red-100 bg-red-50/50 rounded-[2.5rem] text-left transition-all hover:shadow-2xl hover:-translate-y-1 group"
+              >
+                <div className="w-10 h-10 bg-red-500 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg group-hover:rotate-12 transition-transform">
+                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 text-red-500">Efficiency</p>
+                <p className="text-lg font-black text-gray-800 leading-tight">"Set a 10m workout timer"</p>
+              </button>
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="p-8 border-2 border-blue-100 bg-blue-50/50 rounded-[2.5rem] text-left transition-all hover:shadow-2xl hover:-translate-y-1 group"
+              >
+                <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg group-hover:-rotate-12 transition-transform">
+                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2 2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 text-blue-500">Nutrition</p>
+                <p className="text-lg font-black text-gray-800 leading-tight italic">"Analyze food calories"</p>
+              </button>
             </div>
           </div>
         ) : (
           <div className="max-w-3xl mx-auto space-y-12 pb-32">
             {messages.map((msg) => (
               <div key={msg.id} className={`flex group ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`flex items-start max-w-[90%] md:max-w-[85%] space-x-4 ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : 'flex-row'}`}>
-                  <div className={`w-9 h-9 rounded-2xl flex-shrink-0 flex items-center justify-center font-black text-[11px] shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-white border-2 border-gray-100 text-red-500'}`}>
+                <div className={`flex items-start max-w-[92%] md:max-w-[85%] space-x-4 ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : 'flex-row'}`}>
+                  <div className={`w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center font-black text-[13px] shadow-lg transform transition-transform group-hover:scale-110 ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-red-500 text-white italic shadow-red-100'}`}>
                     {msg.role === 'user' ? (user?.name?.charAt(0) || 'U') : 'P'}
                   </div>
                   <div className="space-y-4">
                     {msg.image && (
-                      <div className="relative group/img overflow-hidden rounded-3xl shadow-2xl border-2 border-white">
-                        <img src={`data:${msg.image.mimeType};base64,${msg.image.data}`} className="max-w-xs transition-transform group-hover/img:scale-105" />
+                      <div className="relative group/img overflow-hidden rounded-[2.5rem] shadow-2xl border-4 border-white transition-all hover:rotate-1">
+                        <img src={`data:${msg.image.mimeType};base64,${msg.image.data}`} className="max-w-sm transition-transform group-hover/img:scale-105" />
+                        <div className="absolute top-4 left-4">
+                          <span className="px-3 py-1 bg-yellow-400 text-gray-900 text-[9px] font-black uppercase tracking-widest rounded-full shadow-lg">Nutrient Scan Active</span>
+                        </div>
                       </div>
                     )}
-                    <div className={`p-5 rounded-[2rem] shadow-sm ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-50 text-gray-800'}`}>
-                      <div className="text-[15px] leading-relaxed whitespace-pre-wrap font-medium tracking-tight">
+                    <div className={`p-8 rounded-[2.5rem] shadow-sm transition-all ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800 border border-gray-100'}`}>
+                      <div className="text-[16px] leading-relaxed whitespace-pre-wrap font-bold tracking-tight">
                         {msg.text}
                       </div>
                     </div>
-                    {msg.role === 'model' && msg.text && (
-                      <div className="flex items-center space-x-2 pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <button 
-                          onClick={() => speak(msg.id, msg.text)}
-                          className={`p-2 rounded-xl hover:bg-gray-100 transition-all ${playingId === msg.id ? 'text-red-500 bg-red-50 animate-pulse' : 'text-gray-400'}`}
-                        >
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217z" /></svg>
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
             ))}
             {isTyping && (
-              <div className="flex items-center space-x-4 max-w-3xl mx-auto">
-                <div className="w-9 h-9 rounded-2xl border-2 border-gray-100 text-red-500 flex items-center justify-center font-black text-[11px]">P</div>
-                <div className="flex space-x-1.5 p-4 bg-gray-50 rounded-full">
-                  <div className="w-2 h-2 bg-red-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                  <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+              <div className="flex items-center space-x-5 max-w-3xl mx-auto">
+                <div className="w-12 h-12 rounded-2xl bg-red-500 text-white flex items-center justify-center font-black text-[13px] italic shadow-lg shadow-red-100 animate-pulse">P</div>
+                <div className="flex space-x-2.5 p-6 bg-gray-50 rounded-full">
+                  <div className="w-3 h-3 bg-red-400 rounded-full animate-bounce"></div>
+                  <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                  <div className="w-3 h-3 bg-yellow-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                 </div>
               </div>
             )}
@@ -224,16 +294,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         )}
       </div>
 
-      <div className="sticky bottom-0 w-full p-4 md:p-8 bg-gradient-to-t from-white via-white/95 to-transparent z-10">
+      <div className="sticky bottom-0 w-full p-6 md:p-12 bg-gradient-to-t from-white via-white/95 to-transparent z-10">
         <div className="max-w-3xl mx-auto relative">
-          <form onSubmit={handleSendMessage} className="relative flex items-center bg-gray-100/80 backdrop-blur-md rounded-[2.5rem] border-2 border-transparent focus-within:border-blue-500/20 focus-within:bg-white transition-all shadow-sm">
+          <form onSubmit={handleSendMessage} className="relative flex items-center bg-gray-100/80 backdrop-blur-2xl rounded-[3rem] border-2 border-transparent focus-within:border-red-500/20 focus-within:bg-white transition-all shadow-2xl shadow-gray-200/50">
              <button 
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="p-5 text-gray-400 hover:text-blue-500 transition-colors"
-              title="Upload Image"
+              className="p-8 text-gray-400 hover:text-red-500 transition-all hover:scale-110"
+              title="Add Context Image (Food/Task)"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             </button>
             <input 
               type="file" ref={fileInputRef} className="hidden" accept="image/*"
@@ -246,23 +316,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               type="text" 
               value={input} 
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Query Prakhar AI..."
-              className="flex-1 bg-transparent px-2 py-6 outline-none text-gray-800 font-bold text-[15px] placeholder:text-gray-400 placeholder:font-semibold"
+              placeholder="Consult Prakhar AI for tasks or nutrition..."
+              className="flex-1 bg-transparent px-2 py-8 outline-none text-gray-800 font-black text-lg placeholder:text-gray-400 italic"
             />
             <button 
               type="submit" 
               disabled={isTyping || (!input.trim() && !attachedImage)}
-              className="p-5 mr-1 text-blue-600 hover:scale-110 active:scale-95 transition-all disabled:opacity-20"
+              className="p-6 mr-2 bg-red-500 text-white rounded-full hover:scale-105 active:scale-95 transition-all disabled:opacity-20 shadow-2xl shadow-red-200"
             >
               <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
             </button>
           </form>
           {attachedImage && (
-            <div className="absolute -top-24 left-4 bg-white p-2.5 rounded-3xl border-2 border-blue-100 flex items-center space-x-3 shadow-2xl animate-in slide-in-from-bottom-4">
-              <img src={`data:${attachedImage.mimeType};base64,${attachedImage.data}`} className="h-16 w-16 object-cover rounded-2xl" />
+            <div className="absolute -top-28 left-6 bg-white p-4 rounded-[2rem] border-2 border-red-50 flex items-center space-x-5 shadow-2xl animate-in slide-in-from-bottom-6">
+              <div className="relative h-16 w-16">
+                <img src={`data:${attachedImage.mimeType};base64,${attachedImage.data}`} className="h-full w-full object-cover rounded-2xl shadow-inner" />
+                <div className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full border-2 border-white"></div>
+              </div>
               <div className="pr-4">
-                <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Image Loaded</p>
-                <button onClick={() => setAttachedImage(null)} className="text-red-500 font-black text-[10px] hover:underline uppercase tracking-tighter">Cancel</button>
+                <p className="text-[11px] font-black text-red-500 uppercase tracking-widest italic">Asset Locked</p>
+                <button onClick={() => setAttachedImage(null)} className="text-gray-400 font-black text-[10px] hover:text-red-500 uppercase tracking-tighter transition-colors">Discard</button>
               </div>
             </div>
           )}

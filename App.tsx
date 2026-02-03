@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar.tsx';
 import ChatInterface from './components/ChatInterface.tsx';
@@ -25,31 +26,53 @@ const App: React.FC = () => {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Hide original splash screen immediately once React is mounted
+    const loader = document.getElementById('app-loading-screen');
+    if (loader) {
+      loader.classList.add('hidden-loader');
+    }
+
     try {
       const savedImages = localStorage.getItem('prakhar_ai_images');
-      if (savedImages) setImages(JSON.parse(savedImages));
+      if (savedImages) {
+        const parsed = JSON.parse(savedImages);
+        if (Array.isArray(parsed)) setImages(parsed);
+      }
 
       const savedChats = localStorage.getItem('prakhar_ai_chats');
-      if (savedChats) setChats(JSON.parse(savedChats));
+      if (savedChats) {
+        const parsed = JSON.parse(savedChats);
+        if (Array.isArray(parsed)) setChats(parsed);
+      }
+      
+      const savedUser = localStorage.getItem('prakhar_ai_user');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        if (parsed && typeof parsed === 'object') setUser(parsed);
+      }
     } catch (e) {
-      console.warn("History failed to load from local storage.");
+      console.warn("Prakhar AI: Hydration failed.");
     }
   }, []);
 
   const saveImage = (img: GeneratedImage) => {
-    const newImages = [img, ...images];
-    setImages(newImages);
-    localStorage.setItem('prakhar_ai_images', JSON.stringify(newImages));
+    setImages(prev => {
+      const current = Array.isArray(prev) ? prev : [];
+      const newImages = [img, ...current];
+      localStorage.setItem('prakhar_ai_images', JSON.stringify(newImages));
+      return newImages;
+    });
   };
 
   const handleUpdateChat = (id: string, messages: ChatMessage[], title?: string) => {
     setChats(prev => {
-      const existing = prev.find(c => c.id === id);
+      const current = Array.isArray(prev) ? prev : [];
+      const existing = current.find(c => c.id === id);
       let newChats;
       if (existing) {
-        newChats = prev.map(c => c.id === id ? { ...c, messages, title: title || c.title } : c);
+        newChats = current.map(c => c.id === id ? { ...c, messages, title: title || c.title } : c);
       } else {
-        newChats = [{ id, messages, title: title || "New Chat", timestamp: Date.now() }, ...prev];
+        newChats = [{ id, messages, title: title || "New Chat", timestamp: Date.now() }, ...current];
       }
       localStorage.setItem('prakhar_ai_chats', JSON.stringify(newChats));
       return newChats;
@@ -68,21 +91,33 @@ const App: React.FC = () => {
 
   const handleDeleteChat = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    const newChats = chats.filter(c => c.id !== id);
-    setChats(newChats);
-    localStorage.setItem('prakhar_ai_chats', JSON.stringify(newChats));
+    setChats(prev => {
+      const current = Array.isArray(prev) ? prev : [];
+      const newChats = current.filter(c => c.id !== id);
+      localStorage.setItem('prakhar_ai_chats', JSON.stringify(newChats));
+      return newChats;
+    });
     if (activeChatId === id) setActiveChatId(null);
   };
 
   const handleDeleteImage = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    const newImages = images.filter(img => img.id !== id);
-    setImages(newImages);
-    localStorage.setItem('prakhar_ai_images', JSON.stringify(newImages));
+    setImages(prev => {
+      const current = Array.isArray(prev) ? prev : [];
+      const newImages = current.filter(img => img.id !== id);
+      localStorage.setItem('prakhar_ai_images', JSON.stringify(newImages));
+      return newImages;
+    });
+  };
+
+  const handleSignIn = (name: string) => {
+    const newUser = { name };
+    setUser(newUser);
+    localStorage.setItem('prakhar_ai_user', JSON.stringify(newUser));
   };
 
   return (
-    <div className="flex h-screen w-screen bg-white overflow-hidden">
+    <div className="flex h-screen w-screen bg-white overflow-hidden font-sans">
       <Sidebar 
         isOpen={isSidebarOpen} 
         setIsOpen={setIsSidebarOpen}
@@ -91,24 +126,23 @@ const App: React.FC = () => {
         onNewChat={handleNewChat}
         user={user}
         onSignInClick={() => setIsSignInModalOpen(true)}
-        images={images}
-        chats={chats}
+        images={Array.isArray(images) ? images : []}
+        chats={Array.isArray(chats) ? chats : []}
         activeChatId={activeChatId}
         onSelectChat={handleSelectChat}
         onDeleteChat={handleDeleteChat}
         onDeleteImage={handleDeleteImage}
       />
 
-      <main className="flex-1 flex flex-col transition-all duration-300 relative overflow-hidden">
+      <main className="flex-1 flex flex-col transition-all duration-300 relative overflow-hidden bg-white">
         <header className="md:hidden p-4 border-b flex items-center justify-between bg-white z-50">
           <button 
             onClick={() => setIsSidebarOpen(true)} 
             className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
-            aria-label="Open menu"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" /></svg>
           </button>
-          <h1 className="text-xl font-black tracking-tighter">
+          <h1 className="text-xl font-black tracking-tighter italic">
             Prakhar<span className="prakhar-gradient-text">Ai</span>
           </h1>
           <div className="w-10"></div>
@@ -116,12 +150,12 @@ const App: React.FC = () => {
 
         {loading && <LoadingOverlay />}
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden relative">
           {activeView === 'chat' ? (
             <ChatInterface 
               key={activeChatId || 'new'}
               user={user} 
-              initialMessages={chats.find(c => c.id === activeChatId)?.messages || []}
+              initialMessages={Array.isArray(chats) ? (chats.find(c => c.id === activeChatId)?.messages || []) : []}
               chatId={activeChatId}
               onGenerationStarted={() => setLoading(true)}
               onGenerationEnded={() => setLoading(false)}
@@ -143,7 +177,7 @@ const App: React.FC = () => {
       <SignInModal 
         isOpen={isSignInModalOpen} 
         onClose={() => setIsSignInModalOpen(false)} 
-        onSignIn={(name) => setUser({ name })}
+        onSignIn={handleSignIn}
       />
     </div>
   );

@@ -70,6 +70,7 @@ const StudioInterface: React.FC<StudioInterfaceProps> = ({ onNewImageCreated, on
   return (
     <div className="flex flex-col h-full bg-white overflow-y-auto px-6 py-12 md:px-20 custom-scrollbar relative">
       <div className="max-w-6xl mx-auto w-full">
+        {/* Header Section */}
         <div className="mb-16">
           <div className="flex items-center space-x-4 mb-4">
             <span className="px-4 py-1.5 bg-red-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-red-100">Engine V2.5</span>
@@ -80,6 +81,7 @@ const StudioInterface: React.FC<StudioInterfaceProps> = ({ onNewImageCreated, on
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+          {/* Input Area */}
           <div className="lg:col-span-7 space-y-12">
             <div className="space-y-6">
                <label className="flex items-center space-x-3 text-[11px] font-black text-gray-800 uppercase tracking-[0.3em]">
@@ -94,6 +96,7 @@ const StudioInterface: React.FC<StudioInterfaceProps> = ({ onNewImageCreated, on
                />
             </div>
 
+            {/* Presets Grid */}
             <div className="space-y-6">
                <label className="flex items-center space-x-3 text-[11px] font-black text-gray-800 uppercase tracking-[0.3em]">
                  <div className="w-6 h-6 rounded-lg bg-yellow-500 flex items-center justify-center text-white shadow-lg">2</div>
@@ -147,6 +150,7 @@ const StudioInterface: React.FC<StudioInterfaceProps> = ({ onNewImageCreated, on
             </div>
           </div>
 
+          {/* Configuration Panel */}
           <div className="lg:col-span-5">
             <div className="sticky top-12 space-y-12">
               <div className="space-y-6">

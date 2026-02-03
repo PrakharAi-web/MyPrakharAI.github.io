@@ -25,4 +25,14 @@ export interface ChatMessage {
     data: string;
     mimeType: string;
   };
+  isTimerAction?: boolean;
+}
+
+export interface AppTimer {
+  id: string;
+  label: string;
+  duration: number;
+  remaining: number;
+  isActive: boolean;
+  startTime: number;
 }
