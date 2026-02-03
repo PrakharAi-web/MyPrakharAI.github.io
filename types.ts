@@ -25,7 +25,13 @@ export interface ChatMessage {
     data: string;
     mimeType: string;
   };
-  isTimerAction?: boolean;
+}
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  timestamp: number;
 }
 
 export interface AppTimer {

@@ -5,14 +5,7 @@ import ChatInterface from './components/ChatInterface.tsx';
 import StudioInterface from './components/StudioInterface.tsx';
 import SignInModal from './components/SignInModal.tsx';
 import LoadingOverlay from './components/LoadingOverlay.tsx';
-import { GeneratedImage, ChatMessage } from './types.ts';
-
-interface ChatSession {
-  id: string;
-  title: string;
-  messages: ChatMessage[];
-  timestamp: number;
-}
+import { GeneratedImage, ChatMessage, ChatSession } from './types.ts';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<'chat' | 'studio'>('chat');
@@ -26,125 +19,99 @@ const App: React.FC = () => {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Hide original splash screen immediately once React is mounted
+    // 1. Dismiss original HTML splash screen
     const loader = document.getElementById('app-loading-screen');
     if (loader) {
-      loader.classList.add('hidden-loader');
+      loader.style.opacity = '0';
+      setTimeout(() => loader.classList.add('hidden-loader'), 500);
     }
 
+    // 2. Safely Hydrate State
     try {
-      const savedImages = localStorage.getItem('prakhar_ai_images');
+      const savedImages = localStorage.getItem('prakhar_v3_images');
       if (savedImages) {
         const parsed = JSON.parse(savedImages);
         if (Array.isArray(parsed)) setImages(parsed);
       }
 
-      const savedChats = localStorage.getItem('prakhar_ai_chats');
+      const savedChats = localStorage.getItem('prakhar_v3_chats');
       if (savedChats) {
         const parsed = JSON.parse(savedChats);
         if (Array.isArray(parsed)) setChats(parsed);
       }
       
-      const savedUser = localStorage.getItem('prakhar_ai_user');
+      const savedUser = localStorage.getItem('prakhar_v3_user');
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
-        if (parsed && typeof parsed === 'object') setUser(parsed);
+        if (parsed && parsed.name) setUser(parsed);
       }
     } catch (e) {
-      console.warn("Prakhar AI: Hydration failed.");
+      console.warn("Prakhar AI: Storage reset due to corruption.");
+      localStorage.clear();
     }
   }, []);
 
   const saveImage = (img: GeneratedImage) => {
     setImages(prev => {
-      const current = Array.isArray(prev) ? prev : [];
-      const newImages = [img, ...current];
-      localStorage.setItem('prakhar_ai_images', JSON.stringify(newImages));
-      return newImages;
+      const updated = [img, ...prev];
+      localStorage.setItem('prakhar_v3_images', JSON.stringify(updated));
+      return updated;
     });
   };
 
   const handleUpdateChat = (id: string, messages: ChatMessage[], title?: string) => {
     setChats(prev => {
-      const current = Array.isArray(prev) ? prev : [];
-      const existing = current.find(c => c.id === id);
-      let newChats;
+      const existing = prev.find(c => c.id === id);
+      let next;
       if (existing) {
-        newChats = current.map(c => c.id === id ? { ...c, messages, title: title || c.title } : c);
+        next = prev.map(c => c.id === id ? { ...c, messages, title: title || c.title } : c);
       } else {
-        newChats = [{ id, messages, title: title || "New Chat", timestamp: Date.now() }, ...current];
+        next = [{ id, messages, title: title || "Analysis Session", timestamp: Date.now() }, ...prev];
       }
-      localStorage.setItem('prakhar_ai_chats', JSON.stringify(newChats));
-      return newChats;
+      localStorage.setItem('prakhar_v3_chats', JSON.stringify(next));
+      return next;
     });
-  };
-
-  const handleNewChat = () => {
-    setActiveView('chat');
-    setActiveChatId(null);
-  };
-
-  const handleSelectChat = (id: string) => {
-    setActiveView('chat');
-    setActiveChatId(id);
   };
 
   const handleDeleteChat = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     setChats(prev => {
-      const current = Array.isArray(prev) ? prev : [];
-      const newChats = current.filter(c => c.id !== id);
-      localStorage.setItem('prakhar_ai_chats', JSON.stringify(newChats));
-      return newChats;
+      const filtered = prev.filter(c => c.id !== id);
+      localStorage.setItem('prakhar_v3_chats', JSON.stringify(filtered));
+      return filtered;
     });
     if (activeChatId === id) setActiveChatId(null);
-  };
-
-  const handleDeleteImage = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    setImages(prev => {
-      const current = Array.isArray(prev) ? prev : [];
-      const newImages = current.filter(img => img.id !== id);
-      localStorage.setItem('prakhar_ai_images', JSON.stringify(newImages));
-      return newImages;
-    });
   };
 
   const handleSignIn = (name: string) => {
     const newUser = { name };
     setUser(newUser);
-    localStorage.setItem('prakhar_ai_user', JSON.stringify(newUser));
+    localStorage.setItem('prakhar_v3_user', JSON.stringify(newUser));
   };
 
   return (
-    <div className="flex h-screen w-screen bg-white overflow-hidden font-sans">
+    <div className="flex h-screen w-screen bg-white overflow-hidden font-sans selection:bg-red-100 selection:text-red-600">
       <Sidebar 
         isOpen={isSidebarOpen} 
         setIsOpen={setIsSidebarOpen}
         activeView={activeView}
         setActiveView={setActiveView}
-        onNewChat={handleNewChat}
+        onNewChat={() => { setActiveView('chat'); setActiveChatId(null); }}
         user={user}
         onSignInClick={() => setIsSignInModalOpen(true)}
-        images={Array.isArray(images) ? images : []}
-        chats={Array.isArray(chats) ? chats : []}
+        images={images}
+        chats={chats}
         activeChatId={activeChatId}
-        onSelectChat={handleSelectChat}
+        onSelectChat={(id) => { setActiveView('chat'); setActiveChatId(id); }}
         onDeleteChat={handleDeleteChat}
-        onDeleteImage={handleDeleteImage}
       />
 
       <main className="flex-1 flex flex-col transition-all duration-300 relative overflow-hidden bg-white">
-        <header className="md:hidden p-4 border-b flex items-center justify-between bg-white z-50">
-          <button 
-            onClick={() => setIsSidebarOpen(true)} 
-            className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" /></svg>
+        <header className="md:hidden p-5 border-b flex items-center justify-between bg-white z-50">
+          <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-gray-900">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16m-7 6h7" /></svg>
           </button>
-          <h1 className="text-xl font-black tracking-tighter italic">
-            Prakhar<span className="prakhar-gradient-text">Ai</span>
-          </h1>
+          <h1 className="text-xl font-black italic">Prakhar<span className="prakhar-gradient-text">Ai</span></h1>
           <div className="w-10"></div>
         </header>
 
@@ -155,7 +122,7 @@ const App: React.FC = () => {
             <ChatInterface 
               key={activeChatId || 'new'}
               user={user} 
-              initialMessages={Array.isArray(chats) ? (chats.find(c => c.id === activeChatId)?.messages || []) : []}
+              initialMessages={chats.find(c => c.id === activeChatId)?.messages || []}
               chatId={activeChatId}
               onGenerationStarted={() => setLoading(true)}
               onGenerationEnded={() => setLoading(false)}
